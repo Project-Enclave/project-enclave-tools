@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dev-tools"
+version = "0.1.0"
+description = "Tools made mainly to help the devs of project enclave and other sub projects under it"
+authors = [{name = "Pradhya", email = "Pradhya@projectenclave.dev"}]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.scripts]
+tools = "dev_tools.cli:main"
