@@ -7,7 +7,7 @@ Dev Tools is a small command-line toolkit for contributors to [Project Enclave](
 Install the current public release with `pipx`:
 
 ```bash
-pipx install "git+https://github.com/Chinglen2080/dev-tools.git@v0.1.1"
+pipx install project-enclave-tools
 ```
 
 OpenSSL must be installed and available on your `PATH` for key generation and signing.
