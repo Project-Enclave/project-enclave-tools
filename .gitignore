@@ -5,3 +5,6 @@ build/
 dist/
 .venv/
 venv/
+.env
+.env.*
+!.env.example

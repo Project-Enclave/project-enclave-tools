@@ -1,6 +1,7 @@
 name: Publish to PyPI
 
 on:
+  pull_request:
   release:
     types: [published]
   workflow_dispatch:
@@ -9,7 +10,38 @@ permissions:
   contents: read
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the project
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install the project and development tools
+        run: |
+          python -m pip install -e .
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run project checks
+        run: tools check
+
+      - name: Check the trusted release key fingerprint
+        env:
+          TRUSTED_KEY_FINGERPRINT: "SHA256:C5:7E:67:5D:4C:B3:7A:47:AD:5F:1D:74:67:EF:3B:05:7C:0A:6C:08:2C:AA:80:5C:D7:DE:1C:41:12:AA:AE:5F"
+        run: |
+          actual="$(tools sign --fingerprint --public-key .github/release-public.pem)"
+          test "$actual" = "$TRUSTED_KEY_FINGERPRINT"
+
+      - name: Verify the signed manifest
+        run: tools sign --verify --public-key .github/release-public.pem
+
   build:
+    if: github.event_name != 'pull_request'
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - name: Check out the release source
@@ -34,6 +66,7 @@ jobs:
           if-no-files-found: error
 
   publish:
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     environment:

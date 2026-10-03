@@ -4,12 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "project-enclave-tools"
-version = "0.1.1"
+version = "0.1.2"
 description = "Tools made mainly to help the devs of project enclave and other sub projects under it"
 authors = [{name = "Pradhya", email = "Pradhya@projectenclave.dev"}]
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = []
+dependencies = ["tomli>=2; python_version < '3.11'"]
+
+[project.optional-dependencies]
+release = ["build>=1", "twine>=5"]
 
 [project.urls]
 Repository = "https://github.com/Project-Enclave/project-enclave-tools"
@@ -17,3 +20,50 @@ Issues = "https://github.com/Project-Enclave/project-enclave-tools/issues"
 
 [project.scripts]
 tools = "dev_tools.cli:main"
+
+[tool.ruff]
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.project-enclave-tools]
+output = "text"
+environment-directory = ".venv"
+requirements-files = ["requirements.txt", "requirements-dev.txt"]
+env-template = ".env.example"
+local-config = ".env"
+
+[tool.project-enclave-tools.doctor]
+minimum-python = "3.11"
+
+[tool.project-enclave-tools.setup]
+editable = false
+
+[tool.project-enclave-tools.assets]
+directory = "assets"
+max-bytes = 10485760
+formats = ["png", "jpg", "jpeg", "gif", "webp", "svg"]
+
+[tool.project-enclave-tools.sign]
+include = []
+exclude = []
+
+[tool.project-enclave-tools.release]
+directory = "dist"
+sign = false
+
+[tool.project-enclave-tools.changelog]
+to-ref = "HEAD"
+
+[tool.project-enclave-tools.aliases]
+ci = ["check"]
+doctor-json = ["doctor", "--json"]
+
+[tool.project-enclave-tools.check]
+lint = ["ruff", "check", "dev_tools", "tests"]
+types = ["mypy", "--explicit-package-bases", "dev_tools"]
+tests = ["pytest"]
