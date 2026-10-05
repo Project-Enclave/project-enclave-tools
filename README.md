@@ -201,3 +201,6 @@ The fingerprint is SHA256 over the public key's DER encoding. The GitHub Actions
 ## License
 
 This tool is provided under the GNU General Public License v3.0.
+
+## Ai
+Ai **HAS** been used in this project to help the user understand what this does, how to get it running, etc 
