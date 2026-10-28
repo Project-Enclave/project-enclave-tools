@@ -51,7 +51,11 @@ def generate_keys() -> None:
         print("Keys already exist at:")
         print(f"  Private: {private_key}")
         print(f"  Public:  {public_key}")
-        response = input("Overwrite? (y/n): ").strip().lower()
+        try:
+            response = input("Overwrite? (y/n): ").strip().lower()
+        except EOFError:
+            print("No input available; existing keys were not changed.")
+            return
         if response != "y":
             print("Aborted.")
             return

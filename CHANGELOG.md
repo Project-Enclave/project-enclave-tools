@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-28
+
+- Create parent directories for configured local environment files during setup.
+- Detect Python projects that use configured nonstandard requirements files.
+- Cancel key replacement safely when signing initialization has no interactive input.
+
 ## [0.1.2] - 2026-10-03
 
 - Add project initialization, diagnostics, setup, check, changelog, version, release, and asset commands.

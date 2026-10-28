@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "project-enclave-tools"
-version = "0.1.2"
+version = "0.1.3"
 description = "Tools made mainly to help the devs of project enclave and other sub projects under it"
 authors = [{name = "Pradhya", email = "Pradhya@projectenclave.dev"}]
 readme = "README.md"

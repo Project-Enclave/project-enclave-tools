@@ -31,7 +31,7 @@ jobs:
 
       - name: Check the trusted release key fingerprint
         env:
-          TRUSTED_KEY_FINGERPRINT: "SHA256:C5:7E:67:5D:4C:B3:7A:47:AD:5F:1D:74:67:EF:3B:05:7C:0A:6C:08:2C:AA:80:5C:D7:DE:1C:41:12:AA:AE:5F"
+          TRUSTED_KEY_FINGERPRINT: "SHA256:06:4C:C1:B3:3E:36:A8:12:6A:D7:56:15:28:83:E5:59:39:07:C0:A4:A3:2F:00:4E:F0:F6:5D:D2:E9:A8:E0:43"
         run: |
           actual="$(tools sign --fingerprint --public-key .github/release-public.pem)"
           test "$actual" = "$TRUSTED_KEY_FINGERPRINT"

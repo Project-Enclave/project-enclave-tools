@@ -196,7 +196,7 @@ tools sign --fingerprint --public-key ./trusted-public.pem
 
 Verification checks the signature, each listed file's hash, missing files, and any new signable files that are absent from the manifest.
 
-The fingerprint is SHA256 over the public key's DER encoding. The GitHub Actions workflow verifies the signed manifest on pull requests and before release publishing, using `.github/release-public.pem`. The current trusted fingerprint is `SHA256:C5:7E:67:5D:4C:B3:7A:47:AD:5F:1D:74:67:EF:3B:05:7C:0A:6C:08:2C:AA:80:5C:D7:DE:1C:41:12:AA:AE:5F`; compare it with `tools sign --fingerprint --public-key .github/release-public.pem` before trusting the key.
+The fingerprint is SHA256 over the public key's DER encoding. The GitHub Actions workflow verifies the signed manifest on pull requests and before release publishing, using `.github/release-public.pem`. The current trusted fingerprint is `SHA256:06:4C:C1:B3:3E:36:A8:12:6A:D7:56:15:28:83:E5:59:39:07:C0:A4:A3:2F:00:4E:F0:F6:5D:D2:E9:A8:E0:43`; compare it with `tools sign --fingerprint --public-key .github/release-public.pem` before trusting the key. The former trusted public key is archived at `.github/release-public-previous.pem` for verifying signatures made before this rotation.
 
 ## License
 
