@@ -74,6 +74,7 @@ def _initialize_local_config(
     descriptor = None
     created = False
     try:
+        local_config.parent.mkdir(parents=True, exist_ok=True)
         descriptor = os.open(str(local_config), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         created = True
         destination = os.fdopen(descriptor, "wb")

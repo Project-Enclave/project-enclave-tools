@@ -367,9 +367,10 @@ def doctor(directory: Optional[Path] = None, report_format: Optional[str] = None
         for name in requirements_files
         if resolve_path(root, Path(name)).is_file()
     ]
-    project_has_python_config = any(
-        (root / name).is_file()
-        for name in ("pyproject.toml", ".python-version", "requirements.txt", "requirements-dev.txt")
+    project_has_python_config = (
+        (root / "pyproject.toml").is_file()
+        or (root / ".python-version").is_file()
+        or bool(requirements_paths)
     )
     if not project_has_python_config:
         checks.append(Check("INFO", "Project environment", "No Python project files found; skipped."))
