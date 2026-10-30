@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -30,7 +32,7 @@ def init_project(
     name: Optional[str] = None,
     python_version: Optional[str] = None,
 ) -> int:
-    """Create a basic src-layout Python project, preserving existing files."""
+    """Create a src-layout project, preserve existing files, and initialize Git."""
     root = Path.cwd() if directory is None else Path(directory).expanduser()
     try:
         root = root.resolve()
@@ -50,8 +52,9 @@ def init_project(
 
     files: Dict[Path, str] = {
         Path(".gitignore"): (
-            "__pycache__/\n*.py[cod]\n*.egg-info/\n.venv/\nbuild/\ndist/\n"
-            ".env\n.env.*\n!.env.example\n"
+            "__pycache__/\n*.py[cod]\n*.egg-info/\n.venv/\nvenv/\nenv/\n"
+            ".pytest_cache/\n.mypy_cache/\n.ruff_cache/\n.coverage\nhtmlcov/\n"
+            "build/\ndist/\n.env\n.env.*\n!.env.example\n.DS_Store\nThumbs.db\n"
         ),
         Path(".python-version"): pin + "\n",
         Path("README.md"): (
@@ -68,8 +71,85 @@ def init_project(
             "Windows PowerShell or `source .venv/bin/activate` on macOS/Linux.\n"
         ),
         Path("requirements.txt"): "# Add runtime dependencies here.\n",
-        Path("requirements-dev.txt"): "ruff\nmypy\npytest\nbuild\ntwine\n",
+        Path("requirements-dev.txt"): "ruff\nmypy\npytest\nbuild\ntwine\nbandit\n",
         Path(".env.example"): "# Add required local settings as NAME=value entries.\n",
+        Path(".github") / "workflows" / "ci.yml": """name: CI and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Install project
+        run: python -m pip install --editable .
+      - name: Lint
+        run: ruff check src tests
+      - name: Type check
+        run: mypy src
+      - name: Security scan
+        run: bandit -r src
+      - name: Test
+        run: pytest
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install build tools
+        run: python -m pip install -r requirements-dev.txt
+      - name: Build and validate distributions
+        run: |
+          python -m build
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+""",
         Path("CHANGELOG.md"): (
             "# Changelog\n\n"
             "## [Unreleased]\n\n"
@@ -156,5 +236,109 @@ def init_project(
         print(f"[created] {relative_path}")
     for relative_path in kept:
         print(f"[kept] {relative_path} (already exists)")
+    _initialize_git(root)
     print("\nNext: tools setup --editable")
+    return 0
+
+
+def _initialize_git(root: Path) -> None:
+    """Initialize a main-branch repository without staging or committing files."""
+    git = shutil.which("git")
+    if git is None:
+        raise ProjectInitError("Git was not found. Install Git, then run tools init again.")
+
+    if (root / ".git").exists():
+        print("[kept] .git (already exists)")
+        return
+
+    result = subprocess.run(
+        [git, "-C", str(root), "init", "--initial-branch=main"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        # Older Git versions do not support --initial-branch.
+        result = subprocess.run(
+            [git, "-C", str(root), "init"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            result = subprocess.run(
+                [git, "-C", str(root), "symbolic-ref", "HEAD", "refs/heads/main"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip()
+        raise ProjectInitError(f"Could not initialize Git repository: {detail}")
+    print("[created] .git (branch: main)")
+
+
+def create_github_repository(
+    directory: Path, name: Optional[str] = None, visibility: str = "private"
+) -> int:
+    """Create a GitHub repository and origin with gh, leaving commits to the user."""
+    root = Path(directory).expanduser().resolve()
+    if visibility not in ("private", "public"):
+        raise ProjectInitError("GitHub visibility must be 'private' or 'public'.")
+
+    gh = shutil.which("gh")
+    if gh is None:
+        print("[skipped] GitHub setup (install and authenticate gh to create a remote)")
+        return 0
+
+    auth = subprocess.run(
+        [gh, "auth", "status"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if auth.returncode != 0:
+        print("[skipped] GitHub setup (run 'gh auth login', then rerun tools init)")
+        return 0
+
+    git = shutil.which("git")
+    if git is None:
+        raise ProjectInitError("Git was not found. Install Git before creating a GitHub repo.")
+    origin = subprocess.run(
+        [git, "-C", str(root), "remote", "get-url", "origin"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if origin.returncode == 0:
+        print(f"[kept] origin ({origin.stdout.strip()})")
+        return 0
+
+    project_name = name or root.name
+    distribution, _ = _names(project_name)
+    result = subprocess.run(
+        [
+            gh,
+            "repo",
+            "create",
+            distribution,
+            f"--{visibility}",
+            "--source",
+            str(root),
+            "--remote",
+            "origin",
+        ],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip()
+        raise ProjectInitError(f"Could not create GitHub repository: {detail}")
+
+    output = result.stdout.strip()
+    print(output or f"[created] GitHub repository {distribution} ({visibility})")
+    print("No files were committed or pushed. Review the project, then commit and push it.")
     return 0

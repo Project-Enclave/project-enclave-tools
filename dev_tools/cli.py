@@ -12,7 +12,11 @@ from dev_tools.tools.assets import EXTENSION_FORMATS, AssetError, check_assets
 from dev_tools.tools.changelog import ChangelogError, generate_changelog
 from dev_tools.tools.check import CheckError, run_checks
 from dev_tools.tools.doctor import doctor
-from dev_tools.tools.init import ProjectInitError, init_project
+from dev_tools.tools.init import (
+    ProjectInitError,
+    create_github_repository,
+    init_project,
+)
 from dev_tools.tools.release import ReleaseError, prepare_release
 from dev_tools.tools.setup import SetupError, setup_project
 from dev_tools.tools.signing import (
@@ -225,7 +229,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup_parser.set_defaults(editable=None)
     init_parser = commands.add_parser(
         "init",
-        help="Scaffold a basic Python project without replacing existing files",
+        help="Scaffold a Python project and configure Git and GitHub",
     )
     init_parser.add_argument(
         "directory",
@@ -240,6 +244,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--python-version",
         metavar="VERSION",
         help="Version to write to .python-version (default: current Python)",
+    )
+    init_parser.add_argument(
+        "--no-github",
+        action="store_true",
+        help="Skip creating a GitHub repository with gh",
+    )
+    init_parser.add_argument(
+        "--visibility",
+        choices=("private", "public"),
+        default="private",
+        help="Visibility for the GitHub repository (default: private)",
     )
     changelog_parser = commands.add_parser(
         "changelog",
@@ -432,7 +447,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif args.command == "setup":
             return setup_project(args.directory, args.python, args.editable)
         elif args.command == "init":
-            return init_project(args.directory, args.name, args.python_version)
+            result = init_project(args.directory, args.name, args.python_version)
+            if result != 0 or args.no_github:
+                return result
+            return create_github_repository(args.directory, args.name, args.visibility)
         elif args.command == "changelog":
             changelog_config = table(
                 load_project_config(args.directory), "changelog"
